@@ -1,0 +1,186 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>TAS</title>
+<link rel="stylesheet" href="window.css">
+</head>
+<body>
+<header id="head">
+  <h1>TAS</h1>
+  <div id="tabs" class="tabs">
+    <button class="tab" data-view="inputs" title="The input editor (Ctrl+1; the &quot;Open the input editor&quot; key in the game)">Inputs</button>
+    <button class="tab" data-view="brute" title="The bruteforce (Ctrl+2; the &quot;Open the bruteforce&quot; key in the game)">Bruteforce</button>
+    <button class="tab" data-view="both" title="Both side by side (Ctrl+3)">Both</button>
+  </div>
+  <select id="car" title="The car you are working on — the same as the one you watch in the game"></select>
+  <span id="carinfo" class="dim"></span>
+  <span class="grow"></span>
+  <label class="check" title="Keep this window on top of the game"><input type="checkbox" id="onTop"> On top</label>
+</header>
+
+<div id="panes" class="view-inputs">
+  <!-- the input editor -->
+  <section id="paneInputs" class="pane">
+    <div class="tools">
+      <button id="apply" class="primary" title="Run this car again with these inputs">Apply</button>
+      <button id="revert" title="Back to this run's own inputs">Revert</button>
+      <span class="sep"></span>
+      <button id="insert" title="Add a line at the replay's current moment">+ Line here</button>
+      <button id="compact" title="Fewest lines that give exactly the same run (taps for steady alternations)">Compact</button>
+      <button id="sort" title="Put the lines in time order">Sort</button>
+      <span class="grow"></span>
+      <button id="open" title="Open an inputs file">Open…</button>
+      <button id="save" title="Save these inputs to a file">Save…</button>
+      <button id="copy" title="Copy all the inputs">Copy</button>
+      <button id="helpBtn" class="icon" title="How to write inputs, and the shortcuts">?</button>
+      <button id="settingsBtn" class="icon" title="Settings">⚙</button>
+    </div>
+    <div id="main">
+      <div id="gutter"><div id="gutterLines"></div></div>
+      <div id="code">
+        <div id="nowline"></div>
+        <div id="hl" aria-hidden="true"><pre id="hlText"></pre></div>
+        <textarea id="text" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off" placeholder="One line each time the keys change:  time in ms,keys held&#10;&#10;0,w&#10;1000,wd&#10;1450,w&#10;&#10;Keys: w a s d r (any order), or none. ? above explains the rest."></textarea>
+      </div>
+    </div>
+    <section id="problems"></section>
+    <footer id="foot">
+      <span id="time" title="The replay's current moment">—</span>
+      <span id="keys" class="keys"><i data-k="w">W</i><i data-k="a">A</i><i data-k="s">S</i><i data-k="d">D</i><i data-k="r">R</i></span>
+      <span id="play" class="dim"></span>
+      <span class="grow"></span>
+      <span id="status" class="dim">Waiting for the game…</span>
+    </footer>
+  </section>
+
+  <div id="split" title="Drag to share the width (double-click: as it was)"></div>
+
+  <!-- the bruteforce -->
+  <section id="paneBrute" class="pane">
+    <div class="brute-grid">
+      <div class="objectives">
+        <h2>Objectives</h2>
+        <div class="row" style="gap:6px">
+          <button id="addTrigger" title="A trigger box where the car is now, facing the way it drives (like a checkpoint's hitbox)">+ Trigger</button>
+          <button id="addNogo" title="A box the car must stay out of: a try that goes in ends there, and loses to every try that does not">+ No-go</button>
+        </div>
+        <div id="objList" class="obj-list"></div>
+        <div id="objEdit" class="obj-edit"></div>
+      </div>
+
+      <div class="section-settings">
+        <div class="card">
+          <h2>Time <span class="note">ms</span></h2>
+          <div class="grid3">
+            <label for="tS">Start</label><input id="tS" type="number" min="0" step="1"><button class="small now" data-for="tS" title="The replay's moment">Now</button>
+            <label for="tE">End</label><input id="tE" type="number" min="0" step="1"><button class="small now" data-for="tE" title="The replay's moment">Now</button>
+            <label for="tC">Check</label><input id="tC" type="number" min="0" step="1"><button class="small now" data-for="tC" title="The replay's moment">Now</button>
+          </div>
+          <div class="hint" id="timeHint"></div>
+        </div>
+
+        <div class="card">
+          <h2>Changes</h2>
+          <table class="tbl">
+            <tr><th></th><th>Weight</th><th>Min</th><th>Max</th></tr>
+            <tr><td title="A whole line of the run becomes one of the inputs">Toggle</td><td><input id="wToggle" type="number" min="0" step="0.5"></td><td class="na">—</td><td class="na">—</td></tr>
+            <tr><td title="One of the inputs held for a while, anywhere in its times">Insert</td><td><input id="wInsert" type="number" min="0" step="0.5"></td><td><input id="insMin" type="number" min="1" step="1"></td><td><input id="insMax" type="number" min="1" step="1"></td></tr>
+            <tr><td title="Where one of the inputs starts or ends, moved earlier or later">Shift</td><td><input id="wShift" type="number" min="0" step="0.5"></td><td><input id="shMin" type="number" min="1" step="1"></td><td><input id="shMax" type="number" min="1" step="1"></td></tr>
+          </table>
+          <div class="row tight"><label>Changes per try</label><input id="perMin" type="number" min="1" step="1"><label>to</label><input id="perMax" type="number" min="1" step="1"></div>
+        </div>
+
+        <div class="card inputs-card">
+          <h2>Inputs <span class="note">keys held together, and when</span></h2>
+          <table class="tbl keys">
+            <thead><tr><th>Keys</th><th>Toggle</th><th>Insert</th><th>Shift</th><th class="wide">Only between (ms)</th><th></th></tr></thead>
+            <tbody id="inputRows"></tbody>
+          </table>
+          <div class="row tight"><button id="addInput" class="small" title="Another input the bruteforce may use">+ Input</button><span class="hint grow" id="inputsHint"></span></div>
+        </div>
+
+        <div class="card">
+          <h2>Scoring</h2>
+          <div class="row tight"><label>Distance</label><input id="alpha" type="range" min="0" max="100" step="1"><label>Speed</label></div>
+          <div class="hint" id="alphaHint"></div>
+          <div class="col tight">
+            <label class="check" title="Every try is measured at the same moment, so one that gets there early is not counted slower for it"><input type="radio" name="scoreMode" value="check"> Speed at the check time</label>
+            <label class="check" title="A try stops where it reaches the last objective (quicker tries); one that gets there early has had less time to speed up"><input type="radio" name="scoreMode" value="hit"> Speed at the last objective</label>
+          </div>
+          <div class="col tight">
+            <label class="check" title="The car's speed whichever way it is going (the speedometer shows it the same way)"><input type="radio" name="speedKind" value="raw"> Raw speed (never negative)</label>
+            <label class="check" title="The game's own number: negative while the car moves backwards relative to its nose, for example bouncing back off a wall or flying tail first"><input type="radio" name="speedKind" value="signed"> Signed speed (negative backwards)</label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Search</h2>
+          <div class="row tight">
+            <label class="check"><input type="radio" name="search" value="random"> Random</label>
+            <label class="check" title="Every pattern of the inputs, at every millisecond they may be used, until they are all tried or you stop it"><input type="radio" name="search" value="exhaustive"> Exhaustive</label>
+          </div>
+          <div class="grid2">
+            <label for="pops" class="r-only">Populations</label><input id="pops" class="r-only" type="number" min="1" max="64" step="1">
+            <label for="iters" class="r-only">Iterations</label><input id="iters" class="r-only" type="number" min="0" step="100" title="Tries per population (0: until you stop it)">
+            <label for="threads">Threads</label><input id="threads" type="number" min="0" max="32" step="1">
+          </div>
+          <div class="hint" id="searchHint"></div>
+        </div>
+      </div>
+
+      <div class="section-output">
+        <div class="row wrap">
+          <button id="start" title="Ctrl+Enter">Start</button>
+          <button id="stop" title="Escape">Stop</button>
+          <button id="useBest" title="Put the overall best on the car">Use best</button>
+          <label class="check"><input type="checkbox" id="live"> Show the best on the car as it improves</label>
+          <label class="check"><input type="checkbox" id="showBoxes"> Show the boxes in the game</label>
+          <span class="grow"></span>
+          <span id="runNote" class="dim"></span>
+          <span id="progress" class="dim mono"></span>
+        </div>
+        <div id="log" class="log"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="detached" class="overlay hidden"><div><b>No Replay Editor open</b><p>In the game, open a track, and under its leaderboard press <b>Replay Editor</b>. This window works on the car you watch there.</p></div></div>
+<div id="help" class="overlay hidden">
+  <div class="panel">
+    <h2>Writing inputs</h2>
+    <p>Each line says which keys are held from that millisecond on, until the next line:</p>
+    <pre>0,w          hold W from the start
+1000,wd      from 1.000 s: W and D
+1450,w       from 1.450 s: only W (D let go)
+2000,none    nothing held</pre>
+    <p>Keys are <b>w a s d</b> and <b>r</b> (reset), in any order. A line lists everything held: a key that is not written is not held. Lines can be in any order; at the same time, the later line wins.</p>
+    <p><b>#</b> starts a comment. A <b>tap</b> line alternates keys with whatever was held before it:</p>
+    <pre>tap 3000 3400 a 20 30   from 3.000 to 3.400 s: A for 20 ms,
+                        then back for 30 ms, and again…</pre>
+    <p>Nothing changes in the game until you <b>Apply</b>; then that car runs again from the first millisecond you changed — the same run the game itself would play.</p>
+    <h3>Shortcuts <small>change them in ⚙</small></h3>
+    <div id="helpKeys"></div>
+    <h3>This window</h3>
+    <div class="fixed-keys"><div><span>Inputs, Bruteforce, Both</span><b>Ctrl+1, Ctrl+2, Ctrl+3</b></div><div><span>Bruteforce: start, stop</span><b>Ctrl+Enter, Escape</b></div><div><span>Bruteforce: remove the picked trigger box</span><b>Delete</b></div></div>
+    <div class="row end"><span class="grow"></span><button id="closeHelp" class="primary">Done</button></div>
+  </div>
+</div>
+<div id="settings" class="overlay hidden">
+  <div class="panel">
+    <h2>Settings</h2>
+    <label class="row">Text size <input type="number" id="fontSize" min="10" max="28" step="1"></label>
+    <label class="row">Keep simulating after the last input for <input type="number" id="tail" min="500" max="60000" step="500"> ms</label>
+    <h3>Shortcuts <small>click one, then press the new keys</small></h3>
+    <div id="shortcuts"></div>
+    <div class="row end"><button id="resetKeys">Default shortcuts</button><span class="grow"></span><button id="closeSettings" class="primary">Done</button></div>
+  </div>
+</div>
+<script src="../tas-inputs.js"></script>
+<script src="../tas-brute-core.js"></script>
+<script src="window.js"></script>
+<script src="editor.js"></script>
+<script src="brute.js"></script>
+</body>
+</html>
